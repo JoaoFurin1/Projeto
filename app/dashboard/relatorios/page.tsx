@@ -22,103 +22,143 @@ import {
 import { BarChart3, TrendingUp, Users, Award, Download, RefreshCw } from "lucide-react"
 import BarraNavegacao from "@/components/barra-navegacao"
 
+interface Aluno {
+  nome: string;
+  turma: string;
+  notas: number[];
+  presencas: number[];
+}
+
+interface Estatisticas {
+  mediaGeral: number;
+  taxaAprovacao: number;
+  presencaMedia: number;
+  totalAlunos: number;
+}
+
+interface DadosGraficos {
+  dadosNotasPorBimestre: Array<{
+    bimestre: string;
+    media: number;
+    aprovados: number;
+    reprovados: number;
+  }>;
+  dadosPresencaPorMes: Array<{
+    mes: string;
+    presenca: number;
+  }>;
+  dadosDistribuicaoNotas: Array<{
+    faixa: string;
+    quantidade: number;
+    cor: string;
+  }>;
+  dadosDesempenhoTurmas?: Array<{
+    turma: string;
+    media: number;
+    presenca: number;
+  }>;
+}
+
 export default function PaginaRelatorios() {
-  const [filtroTurma, setFiltroTurma] = useState("todas")
-  const [filtroPeriodo, setFiltroPeriodo] = useState("bimestre-atual")
-  const [carregando, setCarregando] = useState(false)
+  const [filtroTurma, setFiltroTurma] = useState<string>("todas")
+  const [filtroPeriodo, setFiltroPeriodo] = useState<string>("bimestre-atual")
+  const [carregando, setCarregando] = useState<boolean>(false)
+  const [dadosCompletos, setDadosCompletos] = useState<Aluno[]>([])
   const router = useRouter()
 
+  // Carrega dados apenas no client-side
   useEffect(() => {
-    const usuarioLogado = localStorage.getItem("educare_usuario")
+    const usuarioLogado = typeof window !== 'undefined' ? localStorage.getItem("educare_usuario") : null
     if (!usuarioLogado) {
       router.push("/")
       return
     }
+
+    // Função para obter dados reais do localStorage
+    const obterDadosReais = (): Aluno[] => {
+      try {
+        const dadosNotas = localStorage.getItem("educare_notas")
+        const dadosPresenca = localStorage.getItem("educare_presencas")
+
+        let alunos: Aluno[] = []
+
+        if (dadosNotas) {
+          const notasData = JSON.parse(dadosNotas)
+          alunos = notasData.map((aluno: any) => ({
+            nome: aluno.nome || "Aluno sem nome",
+            turma: aluno.turma || "Turma não especificada",
+            notas: [
+              aluno.notas?.bimestre1 || 0,
+              aluno.notas?.bimestre2 || 0,
+              aluno.notas?.bimestre3 || 0,
+              aluno.notas?.bimestre4 || 0,
+            ],
+            presencas: aluno.presencas || [85, 88, 92, 87],
+          }))
+        }
+
+        // Se não há dados salvos, usar dados padrão
+        if (alunos.length === 0) {
+          alunos = [
+            { nome: "Ana Silva", turma: "9A", notas: [8.5, 9.0, 8.8, 9.2], presencas: [95, 92, 98, 90] },
+            { nome: "Bruno Santos", turma: "9A", notas: [7.2, 7.8, 8.0, 8.5], presencas: [88, 85, 90, 92] },
+            { nome: "Carla Oliveira", turma: "9A", notas: [9.5, 9.8, 9.2, 9.6], presencas: [100, 98, 95, 97] },
+            { nome: "Diego Costa", turma: "9A", notas: [6.8, 7.2, 7.5, 7.8], presencas: [82, 78, 85, 88] },
+            { nome: "Elena Rodrigues", turma: "9A", notas: [8.8, 9.1, 8.9, 9.3], presencas: [96, 94, 92, 95] },
+            { nome: "Felipe Lima", turma: "9A", notas: [7.5, 8.0, 7.8, 8.2], presencas: [90, 88, 85, 87] },
+            { nome: "Gabriela Souza", turma: "9A", notas: [9.0, 9.3, 9.1, 9.4], presencas: [98, 96, 100, 94] },
+            { nome: "Henrique Alves", turma: "9A", notas: [6.5, 7.0, 7.2, 7.6], presencas: [80, 82, 78, 85] },
+            { nome: "Isabela Ferreira", turma: "9A", notas: [8.2, 8.6, 8.4, 8.8], presencas: [92, 90, 94, 88] },
+            { nome: "João Pereira", turma: "9A", notas: [7.8, 8.2, 8.0, 8.4], presencas: [86, 88, 90, 92] },
+            { nome: "Larissa Martins", turma: "9A", notas: [9.2, 9.5, 9.0, 9.7], presencas: [97, 95, 98, 96] },
+            { nome: "Mateus Barbosa", turma: "9A", notas: [7.0, 7.4, 7.6, 8.0], presencas: [84, 86, 82, 88] },
+            { nome: "Natália Gomes", turma: "9B", notas: [8.0, 8.4, 8.2, 8.6], presencas: [90, 88, 92, 85] },
+            { nome: "Otávio Silva", turma: "9B", notas: [7.6, 8.0, 7.8, 8.2], presencas: [85, 87, 83, 89] },
+            { nome: "Patrícia Costa", turma: "9B", notas: [9.1, 9.4, 9.0, 9.3], presencas: [95, 93, 97, 91] },
+            { nome: "Rafael Santos", turma: "9B", notas: [6.9, 7.3, 7.1, 7.5], presencas: [78, 80, 82, 84] },
+            { nome: "Sofia Oliveira", turma: "9B", notas: [8.7, 9.0, 8.5, 8.9], presencas: [93, 91, 95, 88] },
+            { nome: "Thiago Lima", turma: "9B", notas: [7.3, 7.7, 7.5, 7.9], presencas: [81, 83, 85, 87] },
+            { nome: "Valentina Souza", turma: "9B", notas: [8.9, 9.2, 8.8, 9.1], presencas: [96, 94, 98, 92] },
+            { nome: "William Alves", turma: "9B", notas: [6.7, 7.1, 6.9, 7.3], presencas: [76, 78, 80, 82] },
+            { nome: "Yasmin Ferreira", turma: "9B", notas: [8.3, 8.7, 8.1, 8.5], presencas: [89, 91, 87, 93] },
+            { nome: "Zeca Pereira", turma: "9B", notas: [7.1, 7.5, 7.3, 7.7], presencas: [83, 85, 81, 87] },
+            { nome: "Amanda Martins", turma: "9B", notas: [8.6, 8.9, 8.4, 8.8], presencas: [92, 90, 94, 88] },
+            { nome: "Bernardo Barbosa", turma: "9B", notas: [7.4, 7.8, 7.6, 8.0], presencas: [86, 84, 88, 90] },
+            { nome: "Camila Gomes", turma: "9C", notas: [7.8, 8.2, 8.0, 8.4], presencas: [88, 86, 90, 84] },
+            { nome: "Daniel Silva", turma: "9C", notas: [6.5, 6.9, 7.1, 7.4], presencas: [75, 77, 79, 81] },
+            { nome: "Eduarda Costa", turma: "9C", notas: [8.4, 8.8, 8.6, 9.0], presencas: [91, 89, 93, 87] },
+            { nome: "Fábio Santos", turma: "9C", notas: [7.2, 7.6, 7.4, 7.8], presencas: [82, 84, 80, 86] },
+            { nome: "Giovanna Oliveira", turma: "9C", notas: [8.1, 8.5, 8.3, 8.7], presencas: [87, 85, 89, 83] },
+            { nome: "Hugo Lima", turma: "9C", notas: [6.8, 7.2, 7.0, 7.4], presencas: [79, 81, 77, 83] },
+            { nome: "Ingrid Souza", turma: "9C", notas: [8.8, 9.1, 8.9, 9.2], presencas: [94, 92, 96, 90] },
+            { nome: "Júlio Alves", turma: "9C", notas: [7.0, 7.4, 7.2, 7.6], presencas: [80, 82, 78, 84] },
+            { nome: "Kelly Ferreira", turma: "9C", notas: [8.5, 8.9, 8.7, 9.1], presencas: [93, 91, 95, 89] },
+            { nome: "Lucas Pereira", turma: "9C", notas: [6.6, 7.0, 6.8, 7.2], presencas: [74, 76, 78, 80] },
+            { nome: "Mariana Martins", turma: "9C", notas: [7.9, 8.3, 8.1, 8.5], presencas: [86, 88, 84, 90] },
+            { nome: "Nicolas Barbosa", turma: "9C", notas: [7.7, 8.1, 7.9, 8.3], presencas: [85, 83, 87, 81] },
+          ]
+        }
+
+        return alunos
+      } catch (error) {
+        console.error("Erro ao obter dados:", error)
+        return []
+      }
+    }
+
+    setDadosCompletos(obterDadosReais())
   }, [router])
 
-  // Função para obter dados reais do localStorage
-  const obterDadosReais = () => {
-    const dadosNotas = localStorage.getItem("educare_notas")
-    const dadosPresenca = localStorage.getItem("educare_presencas")
-
-    let alunos = []
-
-    if (dadosNotas) {
-      const notasData = JSON.parse(dadosNotas)
-      alunos = notasData.map((aluno: any) => ({
-        nome: aluno.nome,
-        turma: aluno.turma,
-        notas: [
-          aluno.notas.bimestre1 || 0,
-          aluno.notas.bimestre2 || 0,
-          aluno.notas.bimestre3 || 0,
-          aluno.notas.bimestre4 || 0,
-        ],
-        presencas: [85, 88, 92, 87], // Dados padrão de presença (pode ser melhorado)
-      }))
-    }
-
-    // Se não há dados salvos, usar dados padrão
-    if (alunos.length === 0) {
-      alunos = [
-        // Turma 9A
-        { nome: "Ana Silva", turma: "9A", notas: [8.5, 9.0, 8.8, 9.2], presencas: [95, 92, 98, 90] },
-        { nome: "Bruno Santos", turma: "9A", notas: [7.2, 7.8, 8.0, 8.5], presencas: [88, 85, 90, 92] },
-        { nome: "Carla Oliveira", turma: "9A", notas: [9.5, 9.8, 9.2, 9.6], presencas: [100, 98, 95, 97] },
-        { nome: "Diego Costa", turma: "9A", notas: [6.8, 7.2, 7.5, 7.8], presencas: [82, 78, 85, 88] },
-        { nome: "Elena Rodrigues", turma: "9A", notas: [8.8, 9.1, 8.9, 9.3], presencas: [96, 94, 92, 95] },
-        { nome: "Felipe Lima", turma: "9A", notas: [7.5, 8.0, 7.8, 8.2], presencas: [90, 88, 85, 87] },
-        { nome: "Gabriela Souza", turma: "9A", notas: [9.0, 9.3, 9.1, 9.4], presencas: [98, 96, 100, 94] },
-        { nome: "Henrique Alves", turma: "9A", notas: [6.5, 7.0, 7.2, 7.6], presencas: [80, 82, 78, 85] },
-        { nome: "Isabela Ferreira", turma: "9A", notas: [8.2, 8.6, 8.4, 8.8], presencas: [92, 90, 94, 88] },
-        { nome: "João Pereira", turma: "9A", notas: [7.8, 8.2, 8.0, 8.4], presencas: [86, 88, 90, 92] },
-        { nome: "Larissa Martins", turma: "9A", notas: [9.2, 9.5, 9.0, 9.7], presencas: [97, 95, 98, 96] },
-        { nome: "Mateus Barbosa", turma: "9A", notas: [7.0, 7.4, 7.6, 8.0], presencas: [84, 86, 82, 88] },
-
-        // Turma 9B
-        { nome: "Natália Gomes", turma: "9B", notas: [8.0, 8.4, 8.2, 8.6], presencas: [90, 88, 92, 85] },
-        { nome: "Otávio Silva", turma: "9B", notas: [7.6, 8.0, 7.8, 8.2], presencas: [85, 87, 83, 89] },
-        { nome: "Patrícia Costa", turma: "9B", notas: [9.1, 9.4, 9.0, 9.3], presencas: [95, 93, 97, 91] },
-        { nome: "Rafael Santos", turma: "9B", notas: [6.9, 7.3, 7.1, 7.5], presencas: [78, 80, 82, 84] },
-        { nome: "Sofia Oliveira", turma: "9B", notas: [8.7, 9.0, 8.5, 8.9], presencas: [93, 91, 95, 88] },
-        { nome: "Thiago Lima", turma: "9B", notas: [7.3, 7.7, 7.5, 7.9], presencas: [81, 83, 85, 87] },
-        { nome: "Valentina Souza", turma: "9B", notas: [8.9, 9.2, 8.8, 9.1], presencas: [96, 94, 98, 92] },
-        { nome: "William Alves", turma: "9B", notas: [6.7, 7.1, 6.9, 7.3], presencas: [76, 78, 80, 82] },
-        { nome: "Yasmin Ferreira", turma: "9B", notas: [8.3, 8.7, 8.1, 8.5], presencas: [89, 91, 87, 93] },
-        { nome: "Zeca Pereira", turma: "9B", notas: [7.1, 7.5, 7.3, 7.7], presencas: [83, 85, 81, 87] },
-        { nome: "Amanda Martins", turma: "9B", notas: [8.6, 8.9, 8.4, 8.8], presencas: [92, 90, 94, 88] },
-        { nome: "Bernardo Barbosa", turma: "9B", notas: [7.4, 7.8, 7.6, 8.0], presencas: [86, 84, 88, 90] },
-
-        // Turma 9C
-        { nome: "Camila Gomes", turma: "9C", notas: [7.8, 8.2, 8.0, 8.4], presencas: [88, 86, 90, 84] },
-        { nome: "Daniel Silva", turma: "9C", notas: [6.5, 6.9, 7.1, 7.4], presencas: [75, 77, 79, 81] },
-        { nome: "Eduarda Costa", turma: "9C", notas: [8.4, 8.8, 8.6, 9.0], presencas: [91, 89, 93, 87] },
-        { nome: "Fábio Santos", turma: "9C", notas: [7.2, 7.6, 7.4, 7.8], presencas: [82, 84, 80, 86] },
-        { nome: "Giovanna Oliveira", turma: "9C", notas: [8.1, 8.5, 8.3, 8.7], presencas: [87, 85, 89, 83] },
-        { nome: "Hugo Lima", turma: "9C", notas: [6.8, 7.2, 7.0, 7.4], presencas: [79, 81, 77, 83] },
-        { nome: "Ingrid Souza", turma: "9C", notas: [8.8, 9.1, 8.9, 9.2], presencas: [94, 92, 96, 90] },
-        { nome: "Júlio Alves", turma: "9C", notas: [7.0, 7.4, 7.2, 7.6], presencas: [80, 82, 78, 84] },
-        { nome: "Kelly Ferreira", turma: "9C", notas: [8.5, 8.9, 8.7, 9.1], presencas: [93, 91, 95, 89] },
-        { nome: "Lucas Pereira", turma: "9C", notas: [6.6, 7.0, 6.8, 7.2], presencas: [74, 76, 78, 80] },
-        { nome: "Mariana Martins", turma: "9C", notas: [7.9, 8.3, 8.1, 8.5], presencas: [86, 88, 84, 90] },
-        { nome: "Nicolas Barbosa", turma: "9C", notas: [7.7, 8.1, 7.9, 8.3], presencas: [85, 83, 87, 81] },
-      ]
-    }
-
-    return alunos
-  }
-
-  // Função para filtrar dados por turma - usando useMemo para otimização
-  const dadosFiltrados = useMemo(() => {
-    const dadosReais = obterDadosReais()
+  // Função para filtrar dados por turma
+  const dadosFiltrados = useMemo<Aluno[]>(() => {
     if (filtroTurma === "todas") {
-      return dadosReais
+      return dadosCompletos
     }
-    return dadosReais.filter((aluno) => aluno.turma === filtroTurma)
-  }, [filtroTurma])
+    return dadosCompletos.filter((aluno) => aluno.turma === filtroTurma)
+  }, [filtroTurma, dadosCompletos])
 
-  // Cálculos automáticos baseados nos dados filtrados - usando useMemo
-  const estatisticas = useMemo(() => {
+  // Cálculos automáticos baseados nos dados filtrados
+  const estatisticas = useMemo<Estatisticas>(() => {
     if (dadosFiltrados.length === 0) {
       return {
         mediaGeral: 0,
@@ -128,18 +168,15 @@ export default function PaginaRelatorios() {
       }
     }
 
-    // Calcular média geral (média das 4 notas de cada aluno)
     const mediasAlunos = dadosFiltrados.map((aluno) => {
       const somaNotas = aluno.notas.reduce((acc, nota) => acc + nota, 0)
       return somaNotas / aluno.notas.length
     })
     const mediaGeral = mediasAlunos.reduce((acc, media) => acc + media, 0) / mediasAlunos.length
 
-    // Calcular taxa de aprovação (média >= 7.0)
     const aprovados = mediasAlunos.filter((media) => media >= 7.0).length
     const taxaAprovacao = (aprovados / dadosFiltrados.length) * 100
 
-    // Calcular presença média
     const presencasAlunos = dadosFiltrados.map((aluno) => {
       const somaPresencas = aluno.presencas.reduce((acc, presenca) => acc + presenca, 0)
       return somaPresencas / aluno.presencas.length
@@ -154,8 +191,8 @@ export default function PaginaRelatorios() {
     }
   }, [dadosFiltrados])
 
-  // Gerar dados para gráficos baseados nos dados reais - usando useMemo
-  const dadosGraficos = useMemo(() => {
+  // Gerar dados para gráficos baseados nos dados reais
+  const dadosGraficos = useMemo<DadosGraficos>(() => {
     // Dados por bimestre
     const dadosNotasPorBimestre = [
       { bimestre: "1º Bim", media: 0, aprovados: 0, reprovados: 0 },
@@ -219,12 +256,12 @@ export default function PaginaRelatorios() {
     ]
 
     // Desempenho por turma (só quando filtro = "todas")
-    let dadosDesempenhoTurmas = []
-    if (filtroTurma === "todas") {
-      const dadosCompletos = obterDadosReais()
+    let dadosDesempenhoTurmas: Array<{turma: string, media: number, presenca: number}> = []
+    if (filtroTurma === "todas" && dadosCompletos.length > 0) {
       const turmas = ["9A", "9B", "9C"]
       dadosDesempenhoTurmas = turmas.map((turma) => {
         const alunosTurma = dadosCompletos.filter((aluno) => aluno.turma === turma)
+        if (alunosTurma.length === 0) return { turma, media: 0, presenca: 0 }
 
         const mediasAlunos = alunosTurma.map((aluno) => {
           const somaNotas = aluno.notas.reduce((acc, nota) => acc + nota, 0)
@@ -250,22 +287,25 @@ export default function PaginaRelatorios() {
       dadosNotasPorBimestre,
       dadosPresencaPorMes,
       dadosDistribuicaoNotas,
-      dadosDesempenhoTurmas,
+      ...(filtroTurma === "todas" && { dadosDesempenhoTurmas }),
     }
-  }, [dadosFiltrados, filtroTurma])
+  }, [dadosFiltrados, filtroTurma, dadosCompletos])
 
-  // Effect para simular carregamento quando muda a turma
   useEffect(() => {
     setCarregando(true)
     const timer = setTimeout(() => {
       setCarregando(false)
-    }, 300) // Simula um pequeno delay para mostrar que está atualizando
+    }, 300)
 
     return () => clearTimeout(timer)
   }, [filtroTurma])
 
-  // Função para exportar dados
   const exportarRelatorio = () => {
+    if (dadosCompletos.length === 0) {
+      alert("Dados ainda não foram carregados")
+      return
+    }
+
     const relatorio = {
       filtros: {
         turma: filtroTurma,
@@ -287,8 +327,6 @@ export default function PaginaRelatorios() {
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
-
-  const dadosCompletos = obterDadosReais()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
@@ -318,7 +356,7 @@ export default function PaginaRelatorios() {
             <Button
               onClick={exportarRelatorio}
               className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white"
-              disabled={carregando}
+              disabled={carregando || dadosCompletos.length === 0}
             >
               <Download className="h-4 w-4 mr-2" />
               Salvar Relatório
@@ -370,7 +408,7 @@ export default function PaginaRelatorios() {
           </CardContent>
         </Card>
 
-        {/* Cards de Resumo - Atualizados automaticamente */}
+        {/* Cards de Resumo */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Card
             className={`bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-lg transition-all duration-300 ${carregando ? "opacity-70" : ""}`}
@@ -539,7 +577,7 @@ export default function PaginaRelatorios() {
           </Card>
 
           {/* Desempenho por Turma - só aparece quando filtro = "todas" */}
-          {filtroTurma === "todas" && (
+          {filtroTurma === "todas" && dadosGraficos.dadosDesempenhoTurmas && (
             <Card
               className={`bg-white/80 backdrop-blur-sm border-0 shadow-lg transition-all duration-300 ${carregando ? "opacity-70" : ""}`}
             >
